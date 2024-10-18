@@ -2,10 +2,13 @@ name: 'Setup Local Artifactory'
 description: 'Setup Local Artifactory'
 inputs:
   RTLIC:
-    description: 'Local Artifactory License'
+    description: 'Local Artifactory License.'
     required: true
   JFROG_HOME:
-    description: 'JFrog Home'
+    description: 'JFrog Home.'
+    required: false
+  VERSION:
+    description: 'Artifactory Version. Default is latest.'
     required: false
 
 runs:
@@ -13,10 +16,14 @@ runs:
   steps:
     - name: Install Local Artifactory
       run: |
-        go install github.com/jfrog/jfrog-testing-infra/local-rt-setup@1.2.0
-        # Temporarily use version 7.84.17 due to an issue with the automatic token generation mechanism in 7.90
-        ~/go/bin/local-rt-setup --rt-version 7.84.17
+        go install github.com/jfrog/jfrog-testing-infra/local-rt-setup@main
+        if [ -n "${{ env.VERSION }}" ]; then
+          ~/go/bin/local-rt-setup --rt-version "$VERSION"
+        else
+          ~/go/bin/local-rt-setup
+        fi
       shell: bash
       env:
         RTLIC: ${{ inputs.RTLIC }}
         JFROG_HOME: ${{ inputs.JFROG_HOME }}
+        VERSION: ${{ inputs.VERSION }}
