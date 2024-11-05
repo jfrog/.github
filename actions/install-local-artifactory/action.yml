@@ -19,9 +19,6 @@ runs:
         go install github.com/jfrog/jfrog-testing-infra/local-rt-setup@main
         if [ -n "${{ env.VERSION }}" ]; then
           ~/go/bin/local-rt-setup --rt-version "$VERSION"
-        elif [ "$RUNNER_OS" == "Windows" ]; then
-          # Temporary workaround for Windows - Utilize a Specific Version Until the Maven Issue is Fixed   
-          ~/go/bin/local-rt-setup --rt-version 7.90.15
         else
           ~/go/bin/local-rt-setup
         fi
