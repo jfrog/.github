@@ -17,12 +17,11 @@ runs:
     - name: Install Local Artifactory
       run: |
         go install github.com/jfrog/jfrog-testing-infra/local-rt-setup@main
-        if [ -n "${{ env.VERSION }}" ]; then
-          ~/go/bin/local-rt-setup --rt-version "$VERSION"
+        if [ -n "${VERSION}" ]; then
+          ~/go/bin/local-rt-setup --rt-version "${VERSION}"
         else
           ~/go/bin/local-rt-setup
         fi
-      shell: bash
       env:
         RTLIC: ${{ inputs.RTLIC }}
         JFROG_HOME: ${{ inputs.JFROG_HOME }}
