@@ -22,6 +22,7 @@ runs:
         else
           ~/go/bin/local-rt-setup
         fi
+      shell: bash
       env:
         RTLIC: ${{ inputs.RTLIC }}
         JFROG_HOME: ${{ inputs.JFROG_HOME }}
