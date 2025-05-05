@@ -16,7 +16,7 @@ runs:
   steps:
     - name: Install Local Artifactory
       run: |
-        go install github.com/jfrog/jfrog-testing-infra/local-rt-setup@main
+        go install github.com/jfrog/jfrog-testing-infra/local-rt-setup@latest
         if [ -n "${VERSION}" ]; then
           ~/go/bin/local-rt-setup --rt-version "${VERSION}"
         else
