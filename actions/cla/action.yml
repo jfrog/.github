@@ -13,6 +13,10 @@ inputs:
   CLA_SIGN_TOKEN:
     description: 'CLA Sign Token'
     required: true
+  branch:
+    description: 'Branch to use for signatures'
+    required: false
+    default: master
 
 runs:
   using: 'composite'
@@ -37,5 +41,5 @@ runs:
         remote-organization-name: "jfrog"
         remote-repository-name: "jfrog-signed-clas"
         # branch should not be protected
-        branch: "master"
+        branch: ${{ inputs.branch }}
         allowlist: bot*
