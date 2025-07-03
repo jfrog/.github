@@ -1,0 +1,77 @@
+name: 'PR Label Check'
+description: 'Check if a PR has required labels from an allowed list'
+
+inputs:
+  allowed-labels:
+    description: 'Comma-separated list of allowed labels'
+    required: false
+    default: 'new feature,bug,breaking change,ignore for release,improvement'
+  require-labels:
+    description: 'Whether to require at least one label (true/false)'
+    required: false
+    default: 'true'
+  no-labels-message:
+    description: 'Error message when no labels are present'
+    required: false
+    default: 'This PR requires at least one label before it can be merged.'
+  invalid-labels-message:
+    description: 'Error message when labels are not in allowed list (use {allowed} and {current} as placeholders)'
+    required: false
+    default: 'This PR must have at least one of these labels: {allowed}. Current labels: {current}'
+
+runs:
+  using: composite
+  steps:
+    - name: Check if PR has allowed labels
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const { data: pr } = await github.rest.pulls.get({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: context.issue.number
+          });
+          
+          // Handle case where no inputs are provided - use all defaults
+          const allowedLabels = '${{ inputs.allowed-labels }}' || 'new feature,bug,breaking change,ignore for release,improvement';
+          const prLabels = pr.labels.map(l => l.name);
+          const requireLabels = '${{ inputs.require-labels }}' === 'true';
+          const noLabelsMessage = '${{ inputs.no-labels-message }}' || 'This PR requires at least one label before it can be merged.';
+          const invalidLabelsMessage = '${{ inputs.invalid-labels-message }}' || 'This PR must have at least one of these labels: {allowed}. Current labels: {current}';
+          
+          // Parse allowed labels, handling empty string case
+          const allowedLabelsArray = allowedLabels.trim() === '' ? 
+            ['new feature', 'bug', 'breaking change', 'ignore for release', 'improvement'] : 
+            allowedLabels.split(',').map(l => l.trim()).filter(l => l.length > 0);
+          
+          // Set outputs
+          core.setOutput('labels', prLabels.join(', '));
+          
+          if (prLabels.length === 0) {
+            if (requireLabels) {
+              core.setOutput('status', 'no_labels');
+              core.setOutput('error', noLabelsMessage);
+              core.setFailed(noLabelsMessage);
+            } else {
+              core.setOutput('status', 'no_labels');
+              core.setOutput('message', 'PR has no labels (not required)');
+              console.log('PR has no labels (not required)');
+            }
+            return;
+          }
+          
+          const hasAllowedLabel = prLabels.some(label => allowedLabelsArray.includes(label));
+          
+          if (hasAllowedLabel) {
+            core.setOutput('status', 'valid');
+            core.setOutput('message', `PR has valid label(s): ${prLabels.join(', ')}`);
+            console.log(`PR has valid label(s): ${prLabels.join(', ')}`);
+          } else {
+            const errorMsg = invalidLabelsMessage
+              .replace('{allowed}', allowedLabelsArray.join(', '))
+              .replace('{current}', prLabels.join(', '));
+            
+            core.setOutput('status', 'invalid');
+            core.setOutput('error', errorMsg);
+            core.setFailed(errorMsg);
+          } 
