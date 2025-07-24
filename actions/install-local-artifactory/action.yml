@@ -1,22 +1,26 @@
-name: 'Setup Local Artifactory'
-description: 'Setup Local Artifactory'
+name: "Setup Local Artifactory"
+description: "Setup Local Artifactory"
 inputs:
   RTLIC:
-    description: 'Local Artifactory License.'
+    description: "Local Artifactory License."
     required: true
   JFROG_HOME:
-    description: 'JFrog Home.'
+    description: "JFrog Home."
     required: false
   VERSION:
-    description: 'Artifactory Version. Default is latest.'
+    description: "Artifactory Version. Default is latest."
     required: false
+  RT_SETUP_VERSION:
+    description: "Version of the local-rt-setup tool. Default is latest."
+    required: false
+    default: "1.3.0"
 
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
     - name: Install Local Artifactory
       run: |
-        go install github.com/jfrog/jfrog-testing-infra/local-rt-setup@latest
+        go install github.com/jfrog/jfrog-testing-infra/local-rt-setup@${RT_SETUP_VERSION}
         if [ -n "${VERSION}" ]; then
           ~/go/bin/local-rt-setup --rt-version "${VERSION}"
         else
@@ -27,3 +31,4 @@ runs:
         RTLIC: ${{ inputs.RTLIC }}
         JFROG_HOME: ${{ inputs.JFROG_HOME }}
         VERSION: ${{ inputs.VERSION }}
+        RT_SETUP_VERSION: ${{ inputs.RT_SETUP_VERSION }}
