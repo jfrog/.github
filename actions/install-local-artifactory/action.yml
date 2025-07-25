@@ -13,7 +13,7 @@ inputs:
   RT_SETUP_VERSION:
     description: "Version of the local-rt-setup tool. Default is latest."
     required: false
-    default: "1.3.3"
+    default: "1.3.4"
 
 runs:
   using: "composite"
