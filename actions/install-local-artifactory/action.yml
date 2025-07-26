@@ -13,7 +13,11 @@ inputs:
   RT_SETUP_VERSION:
     description: "Version of the local-rt-setup tool. Default is latest."
     required: false
-    default: "1.3.5"
+    default: "1.3.6"
+  RT_CONNECTION_TIMEOUT_SECONDS:
+    description: "Connection timeout for the local Artifactory to be up."
+    required: false
+    default: "1200"
 
 runs:
   using: "composite"
@@ -22,9 +26,9 @@ runs:
       run: |
         go install github.com/jfrog/jfrog-testing-infra/local-rt-setup@${RT_SETUP_VERSION}
         if [ -n "${VERSION}" ]; then
-          ~/go/bin/local-rt-setup --rt-version "${VERSION}"
+          ~/go/bin/local-rt-setup --rt-version "${VERSION}" --connection-timeout-seconds "${RT_CONNECTION_TIMEOUT_SECONDS}"
         else
-          ~/go/bin/local-rt-setup
+          ~/go/bin/local-rt-setup --connection-timeout-seconds "${RT_CONNECTION_TIMEOUT_SECONDS}"
         fi
       shell: bash
       env:
@@ -32,3 +36,4 @@ runs:
         JFROG_HOME: ${{ inputs.JFROG_HOME }}
         VERSION: ${{ inputs.VERSION }}
         RT_SETUP_VERSION: ${{ inputs.RT_SETUP_VERSION }}
+        RT_CONNECTTION_TIMEOUT_SECONDS: ${{ inputs.RT_CONNECTTION_TIMEOUT_SECONDS }}
