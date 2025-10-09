@@ -9,8 +9,10 @@ runs:
       run: go mod download
 
     - name: Static Code Analysis
-      uses: golangci/golangci-lint-action@v6
+      uses: golangci/golangci-lint-action@v8
       with:
+        install-mode: binary
+        version: latest
         skip-cache: true
         args: |
           --timeout 5m --enable errcheck,gosimple,ineffassign,staticcheck,typecheck,unused,gocritic,asasalint,asciicheck,errchkjson,forcetypeassert,makezero,nilerr,unparam,unconvert,wastedassign,usestdlibvars --disable govet
