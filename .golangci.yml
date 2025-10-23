@@ -1,4 +1,0 @@
-linters-settings:
-  gosec:
-    excludes:
-      - G602  # Disable G602 rule (potential SQL injection via string formatting)
