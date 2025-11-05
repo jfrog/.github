@@ -1,5 +1,9 @@
 name: "Setup Local Artifactory"
 description: "Setup Local Artifactory"
+# Installation approach:
+# - macOS ARM64 (macos-14+): Installs Rosetta 2 automatically, runs local-rt-setup via arch -x86_64
+# - macOS Intel (macos-13): Runs local-rt-setup natively
+# - Ubuntu/Windows: Runs local-rt-setup natively
 inputs:
   RTLIC:
     description: "Local Artifactory License."
@@ -8,8 +12,9 @@ inputs:
     description: "JFrog Home."
     required: false
   VERSION:
-    description: "Artifactory Version. Default is latest."
+    description: "Artifactory Version. Leave empty to use latest version."
     required: false
+    default: ""
   RT_SETUP_VERSION:
     description: "Version of the local-rt-setup tool. Default is latest."
     required: false
@@ -22,7 +27,45 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Install Local Artifactory
+    - name: Install Local Artifactory (macOS ARM64 with Rosetta 2)
+      if: runner.os == 'macOS' && runner.arch == 'ARM64'
+      run: |
+        echo "Installing Rosetta 2 for macOS ARM64..."
+        softwareupdate --install-rosetta --agree-to-license
+        echo "Rosetta 2 installed"
+        
+        echo "Building local-rt-setup for Intel architecture..."
+        # Create temp directory for building
+        TEMP_DIR=$(mktemp -d)
+        cd "$TEMP_DIR"
+        
+        # Initialize go module and get the package
+        go mod init temp
+        go get github.com/jfrog/jfrog-testing-infra/local-rt-setup@${RT_SETUP_VERSION}
+        
+        # Build explicitly for amd64
+        GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -o ~/go/bin/local-rt-setup github.com/jfrog/jfrog-testing-infra/local-rt-setup
+        
+        # Clean up
+        cd -
+        rm -rf "$TEMP_DIR"
+        
+        echo "Starting Artifactory via Rosetta 2..."
+        if [ -n "${VERSION}" ]; then
+          arch -x86_64 ~/go/bin/local-rt-setup --rt-version "${VERSION}" --connection-timeout-seconds "${RT_CONNECTION_TIMEOUT_SECONDS}"
+        else
+          arch -x86_64 ~/go/bin/local-rt-setup --connection-timeout-seconds "${RT_CONNECTION_TIMEOUT_SECONDS}"
+        fi
+      shell: bash
+      env:
+        RTLIC: ${{ inputs.RTLIC }}
+        JFROG_HOME: ${{ inputs.JFROG_HOME }}
+        VERSION: ${{ inputs.VERSION }}
+        RT_SETUP_VERSION: ${{ inputs.RT_SETUP_VERSION }}
+        RT_CONNECTION_TIMEOUT_SECONDS: ${{ inputs.RT_CONNECTION_TIMEOUT_SECONDS }}
+    
+    - name: Install Local Artifactory (All other platforms)
+      if: ${{ !(runner.os == 'macOS' && runner.arch == 'ARM64') }}
       run: |
         go install github.com/jfrog/jfrog-testing-infra/local-rt-setup@${RT_SETUP_VERSION}
         if [ -n "${VERSION}" ]; then
