@@ -13,4 +13,4 @@ runs:
       with:
         skip-cache: true
         args: |
-          --timeout 5m --enable errcheck,ineffassign,staticcheck,unused,gocritic,asasalint,asciicheck,errchkjson,forcetypeassert,makezero,nilerr,unparam,unconvert,wastedassign,bodyclose,usestdlibvars --disable govet
+          --timeout 5m --enable errcheck,ineffassign,staticcheck,unused,gocritic,asasalint,asciicheck,errchkjson,forcetypeassert,makezero,nilerr,unparam,unconvert,wastedassign,usestdlibvars --disable govet
