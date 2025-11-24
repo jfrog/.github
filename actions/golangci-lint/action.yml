@@ -14,9 +14,21 @@ runs:
       shell: bash
       run: go mod download
 
+    - name: Configure staticcheck
+      shell: bash
+      run: |
+        if [ ! -f .golangci.yml ]; then
+          cat > .golangci.yml << 'EOF'
+        linters-settings:
+          staticcheck:
+            checks:
+              - "${{ inputs.staticcheck-checks }}"
+        EOF
+        fi
+
     - name: Static Code Analysis
       uses: golangci/golangci-lint-action@v8
       with:
         skip-cache: true
         args: |
-          --timeout 5m --enable errcheck,ineffassign,staticcheck,unused,gocritic,asasalint,asciicheck,errchkjson,forcetypeassert,makezero,nilerr,unparam,unconvert,wastedassign,usestdlibvars --disable govet --staticcheck.checks="${{ inputs.staticcheck-checks }}"
+          --timeout 5m --enable errcheck,ineffassign,staticcheck,unused,gocritic,asasalint,asciicheck,errchkjson,forcetypeassert,makezero,nilerr,unparam,unconvert,wastedassign,usestdlibvars --disable govet
