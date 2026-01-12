@@ -1,12 +1,30 @@
 name: 'GolangCi Static Code Analysis'
 description: 'GolangCi Static Code Analysis'
 
+inputs:
+  staticcheck-checks:
+    description: 'Staticcheck checks configuration'
+    required: false
+    default: 'all'
+
 runs:
   using: 'composite'
   steps:
     - name: Go mod download
       shell: bash
       run: go mod download
+
+    - name: Configure staticcheck
+      shell: bash
+      run: |
+        if [ ! -f .golangci.yml ]; then
+          cat > .golangci.yml << 'EOF'
+        linters-settings:
+          staticcheck:
+            checks:
+              - "${{ inputs.staticcheck-checks }}"
+        EOF
+        fi
 
     - name: Static Code Analysis
       uses: golangci/golangci-lint-action@v8
