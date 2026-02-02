@@ -1,5 +1,5 @@
-name: "Setup and Cache Go and Configure Private in needed"
-description: "Setup and Cache Go 1.23 and Configure Private in needed"
+name: "Setup and Cache Go and Configure Private if needed"
+description: "Setup and Cache Go 1.25 with automatic GOMODCACHE detection"
 inputs:
   gh_token:
     description: "GitHub Personal Access Token"
@@ -7,19 +7,24 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Go Cache
-      uses: actions/cache@v4
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
-
     - name: Setup Go
       uses: actions/setup-go@v5
       with:
         go-version: 1.25
         cache: false
+
+    - name: Detect GOMODCACHE path
+      id: go-cache-paths
+      shell: bash
+      run: echo "gomodcache=$(go env GOMODCACHE)" >> $GITHUB_OUTPUT
+
+    - name: Go Cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.go-cache-paths.outputs.gomodcache }}
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
 
     - name: Setup Git Private Module
       if: ${{ inputs.gh_token != '' }}
