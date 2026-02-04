@@ -1,5 +1,5 @@
 name: "Setup and Cache Go and Configure Private if needed"
-description: "Setup and Cache Go 1.25 with automatic GOMODCACHE detection"
+description: "Setup Go 1.25 with architecture-specific caching for modules and tools"
 inputs:
   gh_token:
     description: "GitHub Personal Access Token"
