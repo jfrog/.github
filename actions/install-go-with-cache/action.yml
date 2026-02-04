@@ -1,5 +1,5 @@
 name: "Setup and Cache Go and Configure Private if needed"
-description: "Setup and Cache Go 1.25 with automatic GOMODCACHE detection"
+description: "Setup Go 1.25 with architecture-specific caching for modules and tools"
 inputs:
   gh_token:
     description: "GitHub Personal Access Token"
@@ -37,19 +37,21 @@ runs:
         mkdir -p "$GOBIN"
         echo "path=$GOBIN" >> $GITHUB_OUTPUT
 
-    - name: Go Cache
+    - name: Go Modules Cache
       uses: actions/cache@v4
       with:
         path: ${{ steps.go-cache-paths.outputs.gomodcache }}
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        key: go-mod-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/go.sum') }}
         restore-keys: |
-          ${{ runner.os }}-go-
+          go-mod-${{ runner.os }}-${{ runner.arch }}-
 
     - name: Go Tools Cache
       uses: actions/cache@v4
       with:
         path: ${{ steps.go-bin-path.outputs.path }}
-        key: ${{ runner.os }}-gotools
+        key: go-tools-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/Makefile') }}
+        restore-keys: |
+          go-tools-${{ runner.os }}-${{ runner.arch }}-
 
     - name: Setup Git Private Module
       if: ${{ inputs.gh_token != '' }}
