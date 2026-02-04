@@ -37,19 +37,21 @@ runs:
         mkdir -p "$GOBIN"
         echo "path=$GOBIN" >> $GITHUB_OUTPUT
 
-    - name: Go Cache
+    - name: Go Modules Cache
       uses: actions/cache@v4
       with:
         path: ${{ steps.go-cache-paths.outputs.gomodcache }}
-        key: ${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.sum') }}
+        key: go-mod-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/go.sum') }}
         restore-keys: |
-          ${{ runner.os }}-${{ runner.arch }}-go-
+          go-mod-${{ runner.os }}-${{ runner.arch }}-
 
     - name: Go Tools Cache
       uses: actions/cache@v4
       with:
         path: ${{ steps.go-bin-path.outputs.path }}
-        key: ${{ runner.os }}-${{ runner.arch }}-gotools
+        key: go-tools-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/Makefile') }}
+        restore-keys: |
+          go-tools-${{ runner.os }}-${{ runner.arch }}-
 
     - name: Setup Git Private Module
       if: ${{ inputs.gh_token != '' }}
