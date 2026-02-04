@@ -26,6 +26,17 @@ runs:
         mkdir -p "$GOMODCACHE"
         echo "gomodcache=$GOMODCACHE" >> $GITHUB_OUTPUT
 
+    - name: Detect GOBIN path
+      id: go-bin-path
+      shell: bash
+      run: |
+        GOBIN=$(go env GOBIN)
+        if [ -z "$GOBIN" ]; then
+          GOBIN="$(go env GOPATH)/bin"
+        fi
+        mkdir -p "$GOBIN"
+        echo "path=$GOBIN" >> $GITHUB_OUTPUT
+
     - name: Go Cache
       uses: actions/cache@v4
       with:
@@ -33,6 +44,12 @@ runs:
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
+
+    - name: Go Tools Cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.go-bin-path.outputs.path }}
+        key: ${{ runner.os }}-gotools
 
     - name: Setup Git Private Module
       if: ${{ inputs.gh_token != '' }}
