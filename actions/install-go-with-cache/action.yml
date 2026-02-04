@@ -16,7 +16,15 @@ runs:
     - name: Detect GOMODCACHE path
       id: go-cache-paths
       shell: bash
-      run: echo "gomodcache=$(go env GOMODCACHE)" >> $GITHUB_OUTPUT
+      run: |
+        GOMODCACHE=$(go env GOMODCACHE)
+        # Fallback to default location if empty
+        if [ -z "$GOMODCACHE" ]; then
+          GOMODCACHE="$HOME/go/pkg/mod"
+        fi
+        # Ensure directory exists to prevent cache action warning
+        mkdir -p "$GOMODCACHE"
+        echo "gomodcache=$GOMODCACHE" >> $GITHUB_OUTPUT
 
     - name: Go Cache
       uses: actions/cache@v4
