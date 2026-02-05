@@ -37,21 +37,24 @@ runs:
         mkdir -p "$GOBIN"
         echo "path=$GOBIN" >> $GITHUB_OUTPUT
 
+    # Cache keys include github.job to prevent conflicts between jobs that
+    # download different subsets of modules (e.g., a lint job vs a build job).
+    # This ensures each job maintains its own cache without polluting others.
     - name: Go Modules Cache
       uses: actions/cache@v4
       with:
         path: ${{ steps.go-cache-paths.outputs.gomodcache }}
-        key: go-mod-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/go.sum') }}
+        key: go-mod-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('**/go.sum') }}
         restore-keys: |
-          go-mod-${{ runner.os }}-${{ runner.arch }}-
+          go-mod-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-
 
     - name: Go Tools Cache
       uses: actions/cache@v4
       with:
         path: ${{ steps.go-bin-path.outputs.path }}
-        key: go-tools-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/Makefile') }}
+        key: go-tools-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('**/Makefile') }}
         restore-keys: |
-          go-tools-${{ runner.os }}-${{ runner.arch }}-
+          go-tools-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-
 
     - name: Setup Git Private Module
       if: ${{ inputs.gh_token != '' }}
