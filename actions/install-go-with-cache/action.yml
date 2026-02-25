@@ -2,11 +2,11 @@ name: "Setup and Cache Go and Configure Private if needed"
 description: "Setup Go with architecture-specific caching for modules and tools"
 inputs:
   go-version:
-    description: "The Go version to download and use. Supports semver spec and ranges. Not used if go-version-file is specified."
-    default: "1.25"
-  go-version-file:
-    description: "Path to the go.mod or go.work file to extract the version from. When set, go-version is ignored."
+    description: "The Go version to download and use. Supports semver spec and ranges. When set, go-version-file is ignored."
     default: ""
+  go-version-file:
+    description: "Path to the go.mod or go.work file to extract the version from. Defaults to go.mod so projects automatically use the version declared in their module."
+    default: "go.mod"
   gh_token:
     description: "GitHub Personal Access Token"
 
@@ -16,8 +16,8 @@ runs:
     - name: Setup Go
       uses: actions/setup-go@v6
       with:
-        go-version: ${{ inputs.go-version-file == '' && inputs.go-version || '' }}
-        go-version-file: ${{ inputs.go-version-file }}
+        go-version: ${{ inputs.go-version }}
+        go-version-file: ${{ inputs.go-version == '' && inputs.go-version-file || '' }}
         cache: false
 
     - name: Detect GOMODCACHE path
