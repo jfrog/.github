@@ -48,7 +48,7 @@ runs:
     # download different subsets of modules (e.g., a lint job vs a build job).
     # This ensures each job maintains its own cache without polluting others.
     - name: Go Modules Cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ${{ steps.go-cache-paths.outputs.gomodcache }}
         key: go-mod-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('**/go.sum') }}
@@ -56,7 +56,7 @@ runs:
           go-mod-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-
 
     - name: Go Tools Cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ${{ steps.go-bin-path.outputs.path }}
         key: go-tools-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('**/Makefile') }}
