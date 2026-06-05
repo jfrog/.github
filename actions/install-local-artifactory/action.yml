@@ -58,3 +58,14 @@ runs:
         RT_CONNECTION_TIMEOUT_SECONDS: ${{ inputs.RT_CONNECTION_TIMEOUT_SECONDS }}
         JFROG_URL: ${{ inputs.JFROG_URL }}
         JFROG_ADMIN_TOKEN: ${{ inputs.JFROG_ADMIN_TOKEN }}
+
+    - name: Mask Artifactory admin token in CI logs
+      # Local-install mode writes JFROG_TESTS_LOCAL_ACCESS_TOKEN to $GITHUB_ENV
+      # via local-rt-setup, which isn't auto-masked. Register it with the
+      # runner's secret-masker so subsequent log lines (including rendered
+      # `run:` headers that interpolate the value) redact it as ***.
+      shell: bash
+      run: |
+        if [ -n "${JFROG_TESTS_LOCAL_ACCESS_TOKEN:-}" ]; then
+          echo "::add-mask::${JFROG_TESTS_LOCAL_ACCESS_TOKEN}"
+        fi
