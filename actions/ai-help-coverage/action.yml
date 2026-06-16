@@ -1,0 +1,138 @@
+name: 'AI Help Coverage'
+description: >-
+  Fails when a visible CLI command ships without AI-oriented help. Detects which
+  JFrog CLI repo it runs in from go.mod, generates a temporary Go test that builds
+  the command tree with JFROG_CLI_AI_HELP off and on, and flags any non-Hidden
+  command whose help is identical in both modes (i.e. AIDescription is empty or not
+  wired through ResolveDescription). The generated test is always removed afterward.
+
+inputs:
+  skip-commands:
+    description: >-
+      Comma- or newline-separated command paths to exclude from the check (e.g.
+      "agent skills, mc config"). A path matches itself and its whole subtree.
+      Empty (default) checks every visible command.
+    required: false
+    default: ''
+  generated-file-name:
+    description: 'Name of the temporary test file the action writes and then deletes.'
+    required: false
+    default: 'zzz_aihelp_coverage_generated_test.go'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Detect command entry point
+      id: detect
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        # A plugin registers its commands through one or more functions with the
+        # signature `func Xxx() components.App`. Discover them rather than hard-coding
+        # per-repo names, so a new plugin needs no change here.
+        app_re='func [A-Z][A-Za-z0-9_]*\(\) +components\.App \{'
+        matches="$(grep -rEn --include='*.go' --exclude='*_test.go' --exclude-dir=vendor "$app_re" . || true)"
+
+        if [ -n "$matches" ]; then
+          # Plugin mode. All App accessors in these repos live in one package;
+          # restrict to the dir of the first match and check every accessor there.
+          first="${matches%%$'\n'*}"
+          file="${first%%:*}"
+          dir="$(dirname "$file")"; dir="${dir#./}"
+          pkg="$(awk '/^package /{print $2; exit}' "$file")"
+          applist=""
+          while IFS= read -r line; do
+            f="${line%%:*}"; d="$(dirname "$f")"; d="${d#./}"
+            [ "$d" = "$dir" ] || { echo "Note: ignoring App accessor outside $dir: $line"; continue; }
+            fn="$(printf '%s\n' "$line" | sed -E 's/.*func ([A-Za-z0-9_]+)\(\).*/\1/')"
+            applist="${applist:+$applist, }${fn}()"
+          done <<< "$matches"
+          echo "Plugin entry point(s) in '$dir' (package $pkg): $applist"
+          {
+            echo "skip=false"
+            echo "dir=$dir"
+            echo "template=plugin_test.go.tmpl"
+            echo "package=$pkg"
+            echo "applist=$applist"
+          } >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        # Umbrella mode: package main assembling the tree via getCommands(). The
+        # generated test builds the full tree but excludes embedded-plugin commands.
+        if grep -rEsn --include='*.go' --exclude='*_test.go' 'func getCommands\(\) \(\[\]cli\.Command' . >/dev/null; then
+          echo "Umbrella entry point: getCommands()"
+          {
+            echo "skip=false"
+            echo "dir=."
+            echo "template=umbrella_test.go.tmpl"
+            echo "package=main"
+            echo "applist="
+          } >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        echo "No JFrog CLI command entry point found — skipping."
+        echo "skip=true" >> "$GITHUB_OUTPUT"
+
+    - name: Generate coverage test
+      if: steps.detect.outputs.skip != 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        target="${{ steps.detect.outputs.dir }}/${{ inputs.generated-file-name }}"
+        template="${{ github.action_path }}/templates/${{ steps.detect.outputs.template }}"
+        echo "Generating $target from $(basename "$template")"
+        # __PACKAGE__/__APP_LIST__ are placeholders in plugin_test.go.tmpl;
+        # the self-contained umbrella template contains neither (substitutions no-op).
+        sed -e "s|__PACKAGE__|${{ steps.detect.outputs.package }}|g" \
+            -e "s|__APP_LIST__|${{ steps.detect.outputs.applist }}|g" \
+            "$template" > "$target"
+        echo "Generated $target"
+
+        # Belt and braces: locally exclude the generated file so it can never be
+        # accidentally committed (matches the basename in any directory).
+        exclude="$(git rev-parse --git-path info/exclude 2>/dev/null || true)"
+        name="${{ inputs.generated-file-name }}"
+        if [ -n "$exclude" ]; then
+          mkdir -p "$(dirname "$exclude")"
+          touch "$exclude"
+          grep -qxF "$name" "$exclude" || printf '%s\n' "$name" >> "$exclude"
+          echo "Excluded $name via $exclude"
+        else
+          echo "Not a git working tree — skipping local exclude."
+        fi
+
+    - name: Run AI-help coverage check
+      if: steps.detect.outputs.skip != 'true'
+      shell: bash
+      env:
+        AIHELP_SKIP_COMMANDS: ${{ inputs.skip-commands }}
+      run: |
+        set -euo pipefail
+        dir="${{ steps.detect.outputs.dir }}"
+        pkg="./${dir%/}"
+        echo "Running AI-help coverage check in $pkg"
+        go test -count=1 -run '^TestAIHelpCoverageGenerated$' "$pkg"
+
+    - name: Cleanup generated test
+      if: always() && steps.detect.outputs.skip != 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        target="${{ steps.detect.outputs.dir }}/${{ inputs.generated-file-name }}"
+        if [ -f "$target" ]; then
+          rm -f "$target"
+          echo "Removed $target"
+        else
+          echo "Nothing to clean up ($target absent)."
+        fi
+
+        # Drop the local exclude entry we added during generation.
+        exclude="$(git rev-parse --git-path info/exclude 2>/dev/null || true)"
+        name="${{ inputs.generated-file-name }}"
+        if [ -n "$exclude" ] && [ -f "$exclude" ]; then
+          grep -vxF "$name" "$exclude" > "$exclude.tmp" && mv "$exclude.tmp" "$exclude"
+          echo "Removed local exclude entry for $name"
+        fi
