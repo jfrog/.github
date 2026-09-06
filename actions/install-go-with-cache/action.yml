@@ -5,7 +5,7 @@ inputs:
     description: "The Go version to download and use. Supports semver spec and ranges. When set, go-version-file is ignored."
     default: ""
   go-version-file:
-    description: "Path to the go.mod or go.work file to extract the version from. Defaults to go.mod so projects automatically use the version declared in their module."
+    description: "Path to the go.mod or go.work file to extract the version from. Defaults to go.mod so projects automatically use the version declared in their module. Ignored when go-version is set. If the file does not exist, Go 1.26 is installed and a warning is emitted."
     default: "go.mod"
   gh_token:
     description: "GitHub Personal Access Token"
@@ -13,11 +13,26 @@ inputs:
 runs:
   using: "composite"
   steps:
+    # Without this, a missing version file fails setup-go outright. Repos that never
+    # checked out, or that have no go.mod at all, worked until go-version-file became
+    # the default. Fall back to Go 1.26 for that case.
+    - name: Fall back when the Go version file is missing
+      id: fallback
+      if: ${{ inputs.go-version == '' }}
+      shell: bash
+      env:
+        GO_VERSION_FILE: ${{ inputs.go-version-file }}
+      run: |
+        if [ ! -e "$GO_VERSION_FILE" ]; then
+          echo "::warning title=Go version file not found::The configured go-version-file does not exist in the workspace, so Go 1.26 is installed instead. Run actions/checkout before this action, or pass go-version explicitly to silence this warning."
+          echo "go-version=1.26" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Setup Go
       uses: actions/setup-go@v6
       with:
-        go-version: ${{ inputs.go-version }}
-        go-version-file: ${{ inputs.go-version == '' && inputs.go-version-file || '' }}
+        go-version: ${{ inputs.go-version || steps.fallback.outputs.go-version }}
+        go-version-file: ${{ inputs.go-version == '' && steps.fallback.outputs.go-version == '' && inputs.go-version-file || '' }}
         cache: false
 
     - name: Detect GOMODCACHE path
